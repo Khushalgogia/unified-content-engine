@@ -1,0 +1,77 @@
+{
+  "New_sample.mp4": {
+    "text_area": {
+      "x": 60,
+      "y": 1143,
+      "width": 970,
+      "height": 313
+    },
+    "font": "Verdana-Regular.ttf",
+    "font_size": 59,
+    "color": "#000000",
+    "shadow": null,
+    "alignment": "left",
+    "font_weight": "medium",
+    "padding": 20
+  },
+  "cat.mp4": {
+    "text_area": {
+      "x": 44,
+      "y": 1051,
+      "width": 986,
+      "height": 300
+    },
+    "font": "TrebuchetMS-Regular.ttf",
+    "font_size": 62,
+    "color": "#000000",
+    "shadow": null,
+    "alignment": "left",
+    "font_weight": "medium",
+    "padding": 20
+  },
+       "cat1.mp4": {
+  "text_area": {
+    "x": 37,
+    "y": 1048,
+    "width": 999,
+    "height": 483
+  },
+  "font": "Mulish-Regular.ttf",
+  "font_size": 70,
+  "color": "#000000",
+  "shadow": null,
+  "alignment": "left",
+  "font_weight": "regular",
+  "padding": 20
+},
+  "jerry.mp4": {
+  "text_area": {
+    "x": 37,
+    "y": 1048,
+    "width": 1006,
+    "height": 480
+  },
+  "font": "Mulish-Regular.ttf",
+  "font_size": 65,
+  "color": "#000000",
+  "shadow": null,
+  "alignment": "left",
+  "font_weight": "regular",
+  "padding": 20
+},
+  "aus_real.mp4": {
+  "text_area": {
+    "x": 57,
+    "y": 1064,
+    "width": 973,
+    "height": 473
+  },
+  "font": "TrebuchetMS-Regular.ttf",
+  "font_size": 68,
+  "color": "#000000",
+  "shadow": null,
+  "alignment": "left",
+  "font_weight": "medium",
+  "padding": 20
+}
+}

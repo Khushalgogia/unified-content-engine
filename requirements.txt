@@ -1,0 +1,14 @@
+# Core
+streamlit>=1.30.0
+python-dotenv>=1.0.0
+
+# Joke Generator (Version_12)
+google-genai>=1.0.0
+openai>=1.0.0
+supabase>=2.0.0
+
+# Video Studio (Studio_AutoPost)
+moviepy>=2.2.1
+Pillow>=11.3.0
+numpy>=1.25
+requests>=2.31.0
