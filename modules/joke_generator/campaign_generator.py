@@ -35,6 +35,87 @@ def find_matching_structures(headline: str, top_k: int = 10) -> List[Dict]:
     return matches
 
 
+def search_bridges(headline: str, top_k: int = 30) -> List[Dict]:
+    """
+    Phase 1: Search bridge embeddings and return raw matches for user selection.
+    Does NOT generate any jokes — just returns the semantic search results.
+    """
+    print()
+    print("=" * 60)
+    print(f"🔍 SEARCHING BRIDGES")
+    print(f"   Headline: {headline}")
+    print("=" * 60)
+    print()
+
+    matches = find_matching_structures(headline, top_k=top_k)
+
+    print(f"   Returning {len(matches)} bridge matches for selection")
+    return matches
+
+
+def generate_from_selected(headline: str, selected_matches: List[Dict]) -> List[Dict]:
+    """
+    Phase 2: Generate jokes only for user-selected bridge matches.
+    Takes the headline and pre-selected matches (from search_bridges output).
+    """
+    print()
+    print("=" * 60)
+    print(f"🔥 GENERATING FROM {len(selected_matches)} SELECTED BRIDGES")
+    print(f"   Headline: {headline}")
+    print("=" * 60)
+    print()
+
+    results = []
+
+    for i, match in enumerate(selected_matches):
+        reference_joke = match.get('searchable_text', '')
+        joke_id = match.get('id')
+        similarity = match.get('similarity', 0)
+        bridge = match.get('bridge_content', '')
+
+        print()
+        print(f"[{i+1}/{len(selected_matches)}] ────────────────────────────────")
+        print(f"📌 Reference ID: {joke_id}")
+        print(f"📊 Similarity: {similarity:.3f}")
+        print(f"🌉 Bridge: {bridge[:60]}..." if bridge else "   No bridge")
+        print(f"📝 Joke: {reference_joke[:80]}...")
+        print()
+
+        try:
+            generated = generate_v11_joke(reference_joke, headline)
+
+            if generated.get('success'):
+                result = {
+                    "original_id": joke_id,
+                    "searchable_text": reference_joke,
+                    "bridge_content": bridge,
+                    "similarity": similarity,
+                    "engine": generated.get('engine_selected'),
+                    "selected_strategy": generated.get('selected_strategy'),
+                    "joke": generated.get('draft_joke'),
+                    "brainstorming": generated.get('brainstorming', [])
+                }
+                results.append(result)
+
+                print(f"✅ Engine: {result['engine']}")
+                print(f"💡 Strategy: {result['selected_strategy']}")
+                print(f"🎭 Joke: {result['joke']}")
+            else:
+                print(f"❌ Generation failed: {generated.get('error')}")
+
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            continue
+
+    print()
+    print("=" * 60)
+    print("GENERATION COMPLETE")
+    print("=" * 60)
+    print(f"✅ Generated: {len(results)} jokes from {len(selected_matches)} selected bridges")
+
+    return results
+
+
 def generate_campaign(headline: str, top_k: int = 10) -> List[Dict]:
     """
     Master loop that generates joke variations based on a headline.

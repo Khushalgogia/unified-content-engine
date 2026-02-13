@@ -210,6 +210,9 @@ st.markdown("""
 # ─── Session State Defaults ───────────────────────────────────────────────────
 
 defaults = {
+    "bridge_matches": [],         # Raw semantic search results
+    "selected_bridge_indices": [],# Which bridges the user picked
+    "bridge_selection_done": False,
     "jokes": [],              # List[dict] from campaign_generator
     "selected_indices": [],   # Indices of selected jokes
     "edited_texts": {},       # {index: edited_text}
@@ -269,40 +272,150 @@ st.markdown("""
 <div class="section-header">
     <span class="icon">🧠</span>
     <span class="label">Section 1 — Ideation</span>
-    <span class="desc">Generate jokes from a headline using semantic Bridge Search + Gemini</span>
+    <span class="desc">Search bridge structures → Select the best ones → Generate jokes</span>
 </div>
 """, unsafe_allow_html=True)
 
-col_topic, col_count = st.columns([3, 1])
+# ─── Topic Input + Search ─────────────────────────────────────────────────────
 
-with col_topic:
-    topic = st.text_input(
-        "Topic / Headline",
-        placeholder="e.g. Bangalore Traffic, IPL Auction, Inflation...",
-        label_visibility="collapsed"
+topic = st.text_input(
+    "Topic / Headline",
+    placeholder="e.g. Bangalore Traffic, IPL Auction, Inflation...",
+    label_visibility="collapsed",
+)
+
+col_search, col_reset = st.columns([4, 1])
+
+with col_search:
+    search_btn = st.button(
+        "🔍 Search Bridges",
+        type="primary",
+        use_container_width=True,
+        disabled=not topic.strip(),
     )
-with col_count:
-    joke_count = st.slider("Jokes", 1, 15, 5, label_visibility="collapsed")
+with col_reset:
+    reset_btn = st.button("🔄 New Search", use_container_width=True)
 
-generate_btn = st.button("🔥 Generate Jokes", type="primary", use_container_width=True)
+# ─── Reset Handler ────────────────────────────────────────────────────────────
 
-if generate_btn and topic:
-    with st.spinner("🔍 Searching bridge embeddings and generating jokes..."):
+if reset_btn:
+    for key, val in defaults.items():
+        st.session_state[key] = val
+    st.rerun()
+
+# ─── Phase 1: Bridge Search ──────────────────────────────────────────────────
+
+if search_btn and topic.strip():
+    with st.spinner("🔍 Expanding themes and searching bridge embeddings..."):
         try:
-            from modules.joke_generator.campaign_generator import generate_campaign
-            results = generate_campaign(topic, top_k=joke_count)
-            st.session_state.jokes = results
-            st.session_state.generation_done = True
+            from modules.joke_generator.campaign_generator import search_bridges
+            matches = search_bridges(topic.strip(), top_k=30)
+            st.session_state.bridge_matches = matches
+            st.session_state.selected_bridge_indices = []
+            st.session_state.bridge_selection_done = False
+            # Clear downstream state
+            st.session_state.jokes = []
             st.session_state.selected_indices = []
             st.session_state.edited_texts = {}
             st.session_state.video_paths = {}
             st.session_state.upload_results = {}
+            st.session_state.generation_done = False
             st.session_state.videos_done = False
             st.rerun()
         except Exception as e:
-            st.error(f"❌ Generation failed: {e}")
+            st.error(f"❌ Bridge search failed: {e}")
 
-# Display generated jokes
+# ─── Phase 1 Results: Show Bridge Matches for Selection ──────────────────────
+
+if st.session_state.bridge_matches and not st.session_state.generation_done:
+    st.markdown(
+        f"**{len(st.session_state.bridge_matches)} bridge structures found** — "
+        f"select the ones you want to generate jokes from:"
+    )
+
+    # Select All / Deselect All
+    col_sel_all, col_desel_all, _ = st.columns([1, 1, 4])
+    with col_sel_all:
+        if st.button("✅ Select All", use_container_width=True):
+            st.session_state.selected_bridge_indices = list(
+                range(len(st.session_state.bridge_matches))
+            )
+            st.rerun()
+    with col_desel_all:
+        if st.button("❎ Deselect All", use_container_width=True):
+            st.session_state.selected_bridge_indices = []
+            st.rerun()
+
+    # Display each bridge match as a selectable card
+    for i, match in enumerate(st.session_state.bridge_matches):
+        col_check, col_bridge = st.columns([0.05, 0.95])
+
+        with col_check:
+            selected = st.checkbox(
+                "sel",
+                key=f"bridge_sel_{i}",
+                value=i in st.session_state.selected_bridge_indices,
+                label_visibility="collapsed",
+            )
+            if selected and i not in st.session_state.selected_bridge_indices:
+                st.session_state.selected_bridge_indices.append(i)
+            elif not selected and i in st.session_state.selected_bridge_indices:
+                st.session_state.selected_bridge_indices.remove(i)
+
+        with col_bridge:
+            joke_text = match.get("searchable_text", "N/A")
+            bridge = match.get("bridge_content", "")
+            similarity = match.get("similarity", 0)
+
+            # Truncate long joke text for the card display
+            display_text = joke_text[:200] + "..." if len(joke_text) > 200 else joke_text
+
+            st.markdown(f"""
+            <div class="joke-card">
+                <div class="joke-text">{display_text}</div>
+                <div class="joke-meta">
+                    <span class="badge">#{i + 1}</span>
+                    <span>Similarity: {similarity:.3f}</span>
+                    <span>🌉 {bridge[:80]}{'...' if len(bridge) > 80 else ''}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Generate button (only if bridges are selected)
+    st.markdown("")
+    num_selected = len(st.session_state.selected_bridge_indices)
+
+    generate_btn = st.button(
+        f"🔥 Generate {num_selected} Joke{'s' if num_selected != 1 else ''}"
+        if num_selected > 0 else "🔥 Select bridges above first",
+        type="primary",
+        use_container_width=True,
+        disabled=num_selected == 0,
+    )
+
+    if generate_btn and num_selected > 0:
+        selected_matches = [
+            st.session_state.bridge_matches[i]
+            for i in sorted(st.session_state.selected_bridge_indices)
+        ]
+        with st.spinner(f"🔥 Generating {num_selected} jokes via Gemini..."):
+            try:
+                from modules.joke_generator.campaign_generator import generate_from_selected
+                results = generate_from_selected(topic.strip(), selected_matches)
+                st.session_state.jokes = results
+                st.session_state.generation_done = True
+                st.session_state.bridge_selection_done = True
+                st.session_state.selected_indices = []
+                st.session_state.edited_texts = {}
+                st.session_state.video_paths = {}
+                st.session_state.upload_results = {}
+                st.session_state.videos_done = False
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Generation failed: {e}")
+
+# ─── Generated Jokes Display (same as before) ────────────────────────────────
+
 if st.session_state.jokes:
     st.markdown(f"**{len(st.session_state.jokes)} jokes generated** — select the ones you want to turn into Reels:")
 
