@@ -1,6 +1,8 @@
 """
 V12 Campaign Generator
 Refactored for Unified Content Engine — uses relative imports, no sys.path hack.
+Exports: find_matching_structures, search_bridges, generate_from_selected,
+         generate_campaign, generate_campaign_json
 """
 
 from typing import List, Dict
